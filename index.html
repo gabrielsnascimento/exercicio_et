@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Título da página -->
+    <title>Exercício do Alien</title>
+    <!-- Importa a biblioteca Phaser -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <!-- Estilos para centralizar o conteúdo na página -->
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        // Declaração das variáveis globais
+        
+        // Define as dimensões do jogo
+        const larguraJogo = 700;
+        const alturaJogo = 850;
+
+        // Configurações do jogo
+        const config = {
+            type: Phaser.AUTO, // Tipo de renderização
+            width: larguraJogo, // Largura do jogo
+            height: alturaJogo, // Altura do jogo
+            
+            // Configurações de física
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y : 300 }, // Gravidade aplicada aos objetos
+                    debug: true // Modo de depuração para debug
+                }
+            },
+            
+            // Define as funções de cena do jogo
+            scene: {
+                preload: preload, // Função de pré-carregamento
+                create: create, // Função de criação de objetos na cena
+                update: update // Função de atualização do jogo
+            }
+        };
+
+        // Inicializa o jogo com as configurações definidas
+        const game = new Phaser.Game(config);
+        // Declaração das variáveis
+        var alien; // Objeto alienígena
+        var teclado; // Teclado para entrada do jogador
+        var fogo; // Objeto de fogo
+        var plataforma; // Plataforma para o alienígena ficar em cima
+        var moeda; // Objeto de moeda
+        var placarmoedas; // Texto para exibir o número de moedas coletadas
+        var placarvitorias; // Texto para exibir o número de vitórias
+        var pontuacao = [0,0]; // Pontuação, contendo o número de moedas e de vitórias
+        var estrela; // Objeto de estrela
+
+        // Função para pré-carregar objetos
+        function preload() {
+            // Carrega as imagens necessárias
+            this.load.image('background', 'assets/bg.png');
+            this.load.image('alien', 'assets/alienigena.png');
+            this.load.image('turbo_nave', 'assets/turbo.png');
+            this.load.image('plataforma', 'assets/tijolos.png');
+            this.load.image('moeda', 'assets/moeda.png');
+            this.load.image('estrela', 'assets/estrela_png.png');
+        }
+
+        // Função para criar objetos na cena
+        function create() {
+            // Adiciona a imagem de fundo
+            this.add.image(larguraJogo/2, alturaJogo/2, 'background');
+            
+            // Adiciona o objeto de fogo (inicialmente invisível)
+            fogo = this.add.sprite(0, 0, 'turbo_nave');
+            fogo.setVisible(false);
+            
+            // Adiciona o alienígena e define limites de colisão
+            alien = this.physics.add.sprite(larguraJogo/2, 0, 'alien');
+            alien.setCollideWorldBounds(true);
+            
+            // Captura as teclas do teclado
+            teclado = this.input.keyboard.createCursorKeys();
+
+            // Adiciona a plataforma estática
+            plataforma = this.physics.add.staticImage(larguraJogo/2, alturaJogo/2, 'plataforma');
+            this.physics.add.collider(alien, plataforma);
+
+            // Adiciona o objeto de moeda e define comportamentos de colisão e 'rebote'
+            moeda = this.physics.add.sprite(larguraJogo/2, 0, 'moeda');
+            moeda.setCollideWorldBounds(true);
+            moeda.setBounce(0.7);
+            this.physics.add.collider(moeda, plataforma);
+
+            // Adiciona o objeto de estrela e define comportamentos de colisão e imobilidade
+            estrela = this.physics.add.sprite(600, 218, 'estrela');
+            estrela.setCollideWorldBounds(true);
+            estrela.setScale(0.4);
+            estrela.body.setSize(400,400,true);
+            estrela.body.setAllowGravity(false); //Não deixa a estrela sofrer ação da gravidade
+            estrela.body.immovable = true; //Deixa a estrela imóvel
+            this.physics.add.collider(estrela, alien); //Colisão com o alien
+            this.physics.add.collider(estrela, moeda); //Colisão com as moedas
+
+            // Adiciona o texto para exibir o número de moedas coletadas
+            placarmoedas = this.add.text(50, 50, 'Moedas:' + pontuacao[0], { fontSize:'45px', fill:'#495613' });
+
+            // Adiciona o texto para exibir o número de vitórias
+            placarvitorias = this.add.text(100, 100, 'Vitórias:' + pontuacao[1], { fontSize: '20px', fill:'#495613' });
+
+            // Adiciona um evento de sobreposição entre o alienígena e a moeda
+            this.physics.add.overlap(alien, moeda, function() {
+                moeda.setVisible(false); // Torna a moeda invisível
+                var posicaoMoedas_Y = Phaser.Math.RND.between(50, 650); // Sorteia a posição y da moeda
+                moeda.setPosition(posicaoMoedas_Y, 100); // Define a nova posição da moeda
+                pontuacao[0] += 1; // Incrementa a pontuação de moedas
+                placarmoedas.setText('Moedas:' + pontuacao[0]); // Atualiza o texto de moedas
+                moeda.setVisible(true); // Torna a moeda visível novamente
+
+                // Se a pontuação de moedas for múltipla de 10, adiciona a pontuação de vitórias
+                if (pontuacao[0] % 10 === 0) {
+                    pontuacao[1] += 1;
+                    placarvitorias.setText('Vitórias:' + pontuacao[1]); // Atualiza o texto de vitórias
+                }
+            });
+        }
+
+        // Função para atualizar a lógica do jogo
+        function update() {
+            // Atualiza a velocidade do alienígena com base nas teclas pressionadas
+            if (teclado.left.isDown) {
+                alien.setVelocityX(-150);
+            } else if (teclado.right.isDown) {
+                alien.setVelocityX(150);
+            } else {
+                alien.setVelocityX(0);
+            }
+
+            // Ativa o turbo se a tecla de seta para cima estiver pressionada
+            if (teclado.up.isDown) {
+                alien.setVelocityY(-150);
+                ativarTurbo();
+            } 
+            else {semTurbo();};
+
+            // Atualiza a posição do objeto de fogo para seguir o alienígena
+            fogo.setPosition(alien.x, alien.y + alien.height/2);
+        }
+
+        // Função para ativar o turbo (torna o fogo visível)
+        function ativarTurbo() {
+            fogo.setVisible(true);
+        }
+
+        // Função para desativar o turbo (torna o fogo invisível)
+        function semTurbo() {
+            fogo.setVisible(false);
+        }
+    </script>
+</body>
+</html>
